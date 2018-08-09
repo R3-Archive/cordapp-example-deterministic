@@ -1,0 +1,53 @@
+apply plugin: 'kotlin'
+apply plugin: 'kotlin-jpa'
+apply plugin: 'kotlin-allopen'
+apply from: '../deterministic.gradle'
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'maven-publish'
+apply plugin: 'idea'
+
+cordapp {
+    info {
+        vendor = 'Cordapp Supplier'
+    }
+}
+
+dependencies {
+    cordaCompile "net.corda:corda-serialization-deterministic:$corda_version"
+    cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    cordaCompile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    compileOnly "org.hibernate:hibernate-core:$hibernate_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test-junit"
+    testImplementation "junit:junit:$junit_version"
+}
+
+allOpen {
+    annotations(
+        "javax.persistence.Entity",
+        "javax.persistence.Embeddable",
+        "javax.persistence.MappedSuperclass"
+    )
+}
+
+task install(dependsOn: publishToMavenLocal)
+
+jar {
+    baseName "${rootProject.name}-contract"
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifactId jar.baseName
+        }
+    }
+}
+
+idea {
+    module {
+        if (project.hasProperty("deterministic_idea_sdk")) {
+            jdkName project.property("deterministic_idea_sdk") as String
+        }
+    }
+}

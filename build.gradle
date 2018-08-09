@@ -1,0 +1,81 @@
+buildscript {
+    ext {
+        artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
+        deterministic_idea_sdk = '1.8 (CorDapp)'
+        corda_plugins_version = '4.0.28'
+        corda_version = '4.0-SNAPSHOT'
+        kotlin_version = '1.2.60'
+        log4j_version = '2.11.1'
+        junit_version = '4.12'
+        hibernate_version = '5.2.6.Final'
+    }
+
+    repositories {
+        mavenLocal()
+        jcenter()
+        maven { url "$artifactory_contextUrl/corda-releases" }
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlin_version"
+        classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
+        classpath "net.corda.plugins:quasar-utils:$corda_plugins_version"
+        classpath "net.corda.plugins:cordapp:$corda_plugins_version"
+    }
+}
+
+subprojects {
+    group 'org.testing'
+    version '1.0-SNAPSHOT'
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+        maven { url "$artifactory_contextUrl/corda-releases" } // cordform-common
+        maven { url "https://jitpack.io" }
+    }
+
+    configurations {
+        all {
+            resolutionStrategy {
+                eachDependency { details ->
+                    switch (details.requested.group) {
+                        case 'org.jetbrains.kotlin':
+                            // Force dependencies to use the same version of Kotlin as Corda.
+                            details.useVersion kotlin_version
+                            break
+                    }
+                }
+            }
+        }
+        compile {
+            // We want to use SLF4J's version of these bindings: jcl-over-slf4j
+            // Remove any transitive dependency on Apache's version.
+            exclude group: 'commons-logging', module: 'commons-logging'
+        }
+    }
+
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+        kotlinOptions {
+            jvmTarget = "1.8"
+            javaParameters = true   // Useful for reflection.
+            freeCompilerArgs = ['-Xjvm-default=enable']
+        }
+    }
+
+    tasks.withType(JavaCompile).all {
+        options.encoding = 'UTF-8'
+    }
+
+    tasks.withType(AbstractArchiveTask).all {
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+    }
+}
+
+wrapper {
+    gradleVersion = "4.9"
+    distributionType = Wrapper.DistributionType.ALL
+}

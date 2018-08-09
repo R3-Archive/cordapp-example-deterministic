@@ -1,0 +1,56 @@
+/*
+ * Gradle script plugin: Configure a module such that the Java and Kotlin
+ * compilers use the deterministic rt.jar instead of the full JDK rt.jar.
+ */
+ext {
+    jdk_home = "$rootDir/jdk".toString()
+    rt_jar = "$jdk_home/jre/lib/rt.jar".toString()
+}
+
+repositories {
+    maven { url "$artifactory_contextUrl/corda-dev" } // deterministic-rt SNAPSHOT
+}
+
+configurations {
+    jdk.resolutionStrategy {
+        cacheChangingModulesFor 0, 'seconds'
+    }
+}
+
+dependencies {
+    jdk "net.corda:deterministic-rt:latest.integration:api"
+}
+
+task installJdk(type: Copy) {
+    outputs.dir jdk_home
+
+    from(configurations.jdk) {
+        rename 'deterministic-rt-(.*).jar', 'rt.jar'
+    }
+    into "$jdk_home/jre/lib"
+
+    doLast {
+        def eol = System.getProperty('line.separator')
+        file("$jdk_home/release").write "JAVA_VERSION=\"1.8.0_172\"$eol"
+        mkdir "$jdk_home/bin"
+        file("$jdk_home/bin/javac").with {
+            write "#!/bin/sh\necho \"javac 1.8.0_172\"\n"
+            setExecutable true, false
+            return
+        }
+    }
+}
+
+tasks.withType(AbstractCompile).all {
+    dependsOn installJdk
+
+    // This is a bit ugly, but Gradle isn't recognising the KotlinCompile task
+    // as it does the built-in JavaCompile task.
+    if (it.class.name.startsWith("org.jetbrains.kotlin.gradle.tasks.KotlinCompile")) {
+        kotlinOptions.jdkHome = jdk_home
+    }
+}
+
+tasks.withType(JavaCompile).all {
+    options.compilerArgs << '-bootclasspath' << rt_jar
+}

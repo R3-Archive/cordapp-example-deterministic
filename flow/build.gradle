@@ -1,0 +1,38 @@
+apply plugin: 'kotlin'
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'maven-publish'
+apply plugin: 'idea'
+
+cordapp {
+    info {
+        vendor = 'Cordapp Supplier'
+    }
+}
+
+dependencies {
+    implementation(project(':contract')) {
+        transitive = false
+    }
+    cordaCompile "net.corda:corda-node-api:$corda_version"
+    cordaCompile "net.corda:corda-confidential-identities:$corda_version"
+    testImplementation "net.corda:corda-node-driver:$corda_version"
+    testImplementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test-junit"
+    testImplementation "junit:junit:$junit_version"
+}
+
+task install(dependsOn: publishToMavenLocal)
+
+jar {
+    baseName "${rootProject.name}-flow"
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifactId jar.baseName
+        }
+    }
+}

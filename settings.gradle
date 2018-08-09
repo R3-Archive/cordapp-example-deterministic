@@ -1,0 +1,3 @@
+rootProject.name = 'cordapp-example-deterministic'
+include 'contract'
+include 'flow'
