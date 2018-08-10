@@ -13,7 +13,7 @@ cordapp {
 }
 
 dependencies {
-    cordaCompile "net.corda:corda-serialization-deterministic:$corda_version"
+    cordaCompile "net.corda:corda-serialization-deterministic:$corda_release_version"
     cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     cordaCompile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compileOnly "org.hibernate:hibernate-core:$hibernate_version"
