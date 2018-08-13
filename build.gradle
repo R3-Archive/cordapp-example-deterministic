@@ -4,8 +4,9 @@ buildscript {
         //deterministic_idea_sdk = '1.8 (CorDapp)'
         corda_plugins_version = '4.0.29'
         corda_release_version = '4.0-SNAPSHOT'
-        kotlin_version = '1.2.60'
-        log4j_version = '2.11.1'
+        kotlin_version = '1.2.51'
+        slf4j_version = '1.7.25'
+        log4j_version = '2.9.1'
         junit_version = '4.12'
         hibernate_version = '5.2.6.Final'
     }
@@ -26,25 +27,18 @@ buildscript {
     }
 }
 
-apply plugin: 'java'
-apply plugin: 'net.corda.plugins.cordformation'
-apply plugin: 'net.corda.plugins.cordapp'
-
-dependencies {
-    cordapp project(':flow')
-    cordapp project(':contract')
-    cordaRuntime "net.corda:corda:$corda_release_version"
-    cordaRuntime "net.corda:corda-webserver:$corda_release_version"
-    runtimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
-}
-
-jar {
-    enabled = false
-}
-
 allprojects {
-    group 'org.testing'
+    apply plugin: 'java'
+    apply plugin: 'net.corda.plugins.cordapp'
+
+    group 'com.example'
     version '1.0-SNAPSHOT'
+
+    cordapp {
+        info {
+            vendor = 'Cordapp Supplier'
+        }
+    }
 
     repositories {
         mavenLocal()
@@ -60,8 +54,10 @@ allprojects {
                 eachDependency { details ->
                     switch (details.requested.group) {
                         case 'org.jetbrains.kotlin':
-                            // Force dependencies to use the same version of Kotlin as Corda.
-                            details.useVersion kotlin_version
+                            if (details.requested.name.startsWith('kotlin-')) {
+                                // Force dependencies to use the same version of Kotlin as Corda.
+                                details.useVersion kotlin_version
+                            }
                             break
                     }
                 }
@@ -92,17 +88,49 @@ allprojects {
     }
 }
 
+subprojects {
+    apply plugin: 'maven-publish'
+
+    publishing {
+        publications {
+            "$project.name"(MavenPublication) {
+                from components.java
+                artifactId jar.baseName
+            }
+        }
+    }
+
+    task install(dependsOn: publishToMavenLocal)
+}
+
+apply plugin: 'net.corda.plugins.cordformation'
+
+dependencies {
+    cordapp project(':flow')
+    cordapp project(':contract')
+    cordapp project(':web')
+    cordaRuntime "net.corda:corda:$corda_release_version"
+    cordaRuntime "net.corda:corda-webserver:$corda_release_version"
+    cordaRuntime "org.slf4j:slf4j-simple:$slf4j_version"
+}
+
+jar {
+    enabled = false
+}
+
 /*
  * Example deployment with three nodes: Notary, PartyA and PartyB.
  */
 def flowJar = tasks.getByPath(':flow:jar')
 def contractJar = tasks.getByPath(':contract:jar')
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [flowJar, contractJar]) {
+def webJar = tasks.getByPath(':web:jar')
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [flowJar, contractJar, webJar]) {
     directory file("$buildDir/nodes")
 
     nodeDefaults {
         cordapp project(':flow')
         cordapp project(':contract')
+        cordapp project(':web')
         projectCordapp {
             deploy = false
         }
