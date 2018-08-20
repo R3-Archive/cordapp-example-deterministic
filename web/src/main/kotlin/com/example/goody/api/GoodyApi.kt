@@ -1,11 +1,20 @@
 package com.example.goody.api
 
+import com.example.goody.contracts.Candy
+import com.example.goody.contracts.Goody
 import com.example.goody.flows.GoodyIssueFlow
 import com.example.goody.flows.GoodyTransferFlow
+import com.example.goody.schemas.GoodySchemaV1
+import net.corda.core.contracts.Amount
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.vaultQueryBy
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.Vault.StateModificationStatus.MODIFIABLE
+import net.corda.core.node.services.vault.builder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import javax.ws.rs.*
@@ -80,5 +89,52 @@ class GoodyApi(private val rpcOps: CordaRPCOps) {
                 async.resume(BadRequestException(ex.message))
             }
         }
+    }
+
+    /**
+     * Requests how many of each type or Candy we currently own.
+     */
+    @GET
+    @Path("balances")
+    @Produces(APPLICATION_JSON)
+    @Consumes(APPLICATION_JSON, APPLICATION_FORM_URLENCODED)
+    fun balances(@QueryParam("candy") candyType: String?, @Suspended async: AsyncResponse) {
+        async.register(CompletionCallback { ex ->
+            if (ex == null) log.info("Balance request completed") else log.error("Balance request failed", ex)
+        })
+
+        log.info("Received Balance request: candy='{}'", candyType ?: "ALL")
+
+        thread(isDaemon = true) {
+            val balances = try {
+                rowsToBalances(rpcOps.vaultQueryBy<Goody.State>(generateCandySumCriteria(candyType)).otherResults)
+            } catch (ex: Exception) {
+                async.resume(BadRequestException(ex.message))
+                return@thread
+            }
+            async.resume(Response.ok(mapOf("balances" to balances)).build())
+        }
+    }
+
+    private fun generateCandySumCriteria(candyType: String?): QueryCriteria {
+        val sum = builder { GoodySchemaV1.PersistentGoodyState::count.sum(groupByColumns = listOf(GoodySchemaV1.PersistentGoodyState::type)) }
+        return QueryCriteria.VaultCustomQueryCriteria(sum).let { sumCriteria ->
+            if (candyType != null) {
+                val candyIndex = builder { GoodySchemaV1.PersistentGoodyState::type.equal(candyType.toUpperCase()) }
+                // This query should only return states the calling node is a participant of (meaning they can be modified/spent).
+                sumCriteria.and(QueryCriteria.VaultCustomQueryCriteria(candyIndex, isModifiable = MODIFIABLE))
+            } else {
+                sumCriteria
+            }
+        }
+    }
+
+    private fun rowsToBalances(rows: List<Any>): Map<Candy, Amount<Candy>> {
+        val balances = mutableMapOf<Candy, Amount<Candy>>()
+        for (index in 0 until rows.size step 2) {
+            val candy = Candy(rows[index + 1] as String)
+            balances[candy] = Amount(rows[index] as Long, candy)
+        }
+        return balances
     }
 }
