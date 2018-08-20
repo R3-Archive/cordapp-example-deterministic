@@ -20,6 +20,7 @@ class GoodyIssueTest {
     private companion object {
         private val log = loggerFor<GoodyIssueTest>()
         private val GOODY_REFERENCE = OpaqueBytes(byteArrayOf(0x65, 0x33, 0x00, 0x24, 0x7C, 0x69))
+        private val TOFFEE = Candy("Toffee")
     }
     private lateinit var mockNet: MockNetwork
     private lateinit var bankOfGoodiesNode: StartedMockNode
@@ -43,7 +44,7 @@ class GoodyIssueTest {
 
     @Test
     fun `issue some goodies`() {
-        val expected = Amount(1002, Candy("Toffee"))
+        val expected = Amount(1002, TOFFEE)
         val future = bankOfGoodiesNode.startFlow(GoodyIssueFlow(expected, GOODY_REFERENCE, notary))
         mockNet.runNetwork()
         val issueTx = future.getOrThrow()

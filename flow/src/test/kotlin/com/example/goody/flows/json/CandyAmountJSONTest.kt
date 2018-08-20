@@ -19,7 +19,7 @@ class CandyAmountJSONTest {
         val str = """{
             "quantity": 100,
             "token": {
-                "type": "Nougat"
+                "type": "NOUGAT"
             }
 }
 """.trimIndent()
@@ -32,6 +32,6 @@ class CandyAmountJSONTest {
     @Test
     fun testSerialize() {
         val candy = Amount(12345, NOUGAT)
-        assertThat(mapper.writeValueAsString(candy)).isEqualTo(""""12345 Nougat"""")
+        assertThat(mapper.writeValueAsString(candy)).isEqualTo(""""12345 NOUGAT"""")
     }
 }

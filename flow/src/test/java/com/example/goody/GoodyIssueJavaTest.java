@@ -30,6 +30,7 @@ import static org.junit.Assert.assertNotNull;
 public class GoodyIssueJavaTest {
     private static final Logger LOG = LoggerFactory.getLogger(GoodyIssueJavaTest.class);
     private static final OpaqueBytes GOODY_REFERENCE = new OpaqueBytes(new byte[] { 0x65, 0x33, 0x00, 0x24, 0x7C, 0x69 });
+    private static final Candy TOFFEE = new Candy("Toffee");
 
     private MockNetwork mockNet;
     private StartedMockNode bankOfGoodiesNode;
@@ -53,7 +54,7 @@ public class GoodyIssueJavaTest {
 
     @Test
     public void issueSomeGoodies() {
-        Amount<Candy> expected = new Amount<>(1002, new Candy("Toffee"));
+        Amount<Candy> expected = new Amount<>(1002, TOFFEE);
         CordaFuture<SignedTransaction> future = bankOfGoodiesNode.startFlow(new GoodyIssueFlow(expected, GOODY_REFERENCE, notary));
         mockNet.runNetwork();
         SignedTransaction issueTx = getOrThrow(future,null);
