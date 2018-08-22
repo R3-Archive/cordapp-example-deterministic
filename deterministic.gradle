@@ -7,6 +7,8 @@ ext {
     rt_jar = "$jdk_home/jre/lib/rt.jar".toString()
 }
 
+apply plugin: 'idea'
+
 repositories {
     maven { url "$artifactory_contextUrl/corda-dev" } // deterministic-rt SNAPSHOT
 }
@@ -53,4 +55,12 @@ tasks.withType(AbstractCompile).all {
 
 tasks.withType(JavaCompile).all {
     options.compilerArgs << '-bootclasspath' << rt_jar
+}
+
+idea {
+    module {
+        if (project.hasProperty("deterministic_idea_sdk")) {
+            jdkName project.property("deterministic_idea_sdk") as String
+        }
+    }
 }
