@@ -5,9 +5,9 @@ apply from: '../deterministic.gradle'
 apply plugin: 'idea'
 
 dependencies {
-    cordaCompile "net.corda:corda-serialization-deterministic:$corda_release_version"
-    cordaCompile("net.corda:corda-jackson:$corda_release_version") {
-        exclude group: 'net.corda'
+    cordaCompile "$corda_release_group:corda-serialization-deterministic:$corda_release_version"
+    cordaCompile("$corda_release_group:corda-jackson:$corda_release_version") {
+        exclude group: corda_release_group
     }
     cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     cordaCompile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
