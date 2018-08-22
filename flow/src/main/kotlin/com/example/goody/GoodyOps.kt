@@ -91,4 +91,5 @@ object GoodyOps {
     }
 
     fun generateMoveCommand() = Goody.Commands.Move()
+    fun generateExitCommand(amount: Amount<Issued<Candy>>) = Goody.Commands.Exit(amount)
 }
