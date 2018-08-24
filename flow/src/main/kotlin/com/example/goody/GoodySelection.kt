@@ -6,10 +6,12 @@ import com.example.goody.contracts.Goody
 import com.example.goody.schemas.GoodySchemaV1
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
+import net.corda.core.utilities.OpaqueBytes
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 
@@ -25,12 +27,18 @@ class GoodySelection {
     @Suspendable
     fun unconsumedGoodyStates(services: ServiceHub,
                               amount: Amount<Candy>,
+                              lockId: UUID,
                               notary: Party? = null,
-                              lockId: UUID): List<StateAndRef<Goody.State>> {
+                              onlyFromIssuerParties: Set<AbstractParty>? = null,
+                              withIssuerRefs: Set<OpaqueBytes>? = null): List<StateAndRef<Goody.State>> {
         val ourParties = services.keyManagementService.keys.map { key ->
             services.identityService.partyFromKey(key) ?: throw IllegalStateException("Unable to resolve party from key")
         }
-        val fungibleCriteria = QueryCriteria.FungibleAssetQueryCriteria(owner = ourParties)
+        val fungibleCriteria = QueryCriteria.FungibleAssetQueryCriteria(
+            owner = ourParties,
+            issuer = onlyFromIssuerParties?.toList(),
+            issuerRef = withIssuerRefs?.toList()
+        )
 
         val notaries = if (notary != null) listOf(notary) else services.networkMapCache.notaryIdentities
         val vaultCriteria = QueryCriteria.VaultQueryCriteria(notary = notaries)

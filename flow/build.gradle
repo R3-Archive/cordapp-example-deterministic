@@ -13,6 +13,10 @@ dependencies {
     testImplementation "junit:junit:$junit_version"
 }
 
+configurations.compile {
+    exclude group: 'ch.qos.logback'
+}
+
 jar {
     baseName "${rootProject.name}-flow"
 }

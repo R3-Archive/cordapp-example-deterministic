@@ -9,6 +9,12 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 
 abstract class AbstractGoodyFlow(override val progressTracker: ProgressTracker) : FlowLogic<SignedTransaction>() {
+    companion object {
+        object STARTING : ProgressTracker.Step("Starting")
+        object SIGNING : ProgressTracker.Step("Signing")
+        object FINALISING : ProgressTracker.Step("Finalising")
+    }
+
     @Suspendable
     protected fun finaliseTx(tx: SignedTransaction, extraParticipants: Set<Party>, message: String): SignedTransaction {
         try {

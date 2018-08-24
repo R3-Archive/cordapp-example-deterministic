@@ -2,6 +2,7 @@ package com.example.goody.api
 
 import com.example.goody.contracts.Candy
 import com.example.goody.contracts.Goody
+import com.example.goody.flows.GoodyExitFlow
 import com.example.goody.flows.GoodyIssueFlow
 import com.example.goody.flows.GoodyTransferFlow
 import com.example.goody.schemas.GoodySchemaV1
@@ -11,7 +12,6 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
-import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.Vault.StateModificationStatus.MODIFIABLE
 import net.corda.core.node.services.vault.builder
@@ -55,14 +55,15 @@ class GoodyApi(private val rpcOps: CordaRPCOps) {
         log.info("Received Issue request: candy='{}', reference={}", issueRequest.candy, issueRequest.issuerReference)
 
         thread(isDaemon = true) {
-            try {
+            val signedTx = try {
                 val notary = issueRequest.notary ?: rpcOps.notaryIdentities().first()
-                val signedTx = rpcOps.startFlow(::GoodyIssueFlow, issueRequest.candy, issueRequest.issuerReference, notary)
+                rpcOps.startFlow(::GoodyIssueFlow, issueRequest.candy, issueRequest.issuerReference, notary)
                         .returnValue.getOrThrow()
-                async.resume(Response.ok("Transaction ID: ${signedTx.id}").build())
             } catch (ex: Exception) {
                 async.resume(BadRequestException(ex.message))
+                return@thread
             }
+            async.resume(Response.ok("Transaction ID: ${signedTx.id}").build())
         }
     }
 
@@ -81,13 +82,14 @@ class GoodyApi(private val rpcOps: CordaRPCOps) {
         log.info("Received Transfer request: candy='{}', recipient='{}'", transferRequest.candy, transferRequest.recipient)
 
         thread(isDaemon = true) {
-            try {
-                val signedTx = rpcOps.startFlow(::GoodyTransferFlow, transferRequest.candy, transferRequest.recipient)
+            val signedTx = try {
+                rpcOps.startFlow(::GoodyTransferFlow, transferRequest.candy, transferRequest.recipient)
                         .returnValue.getOrThrow()
-                async.resume(Response.ok("Transaction ID: ${signedTx.id}").build())
             } catch (ex: Exception) {
                 async.resume(BadRequestException(ex.message))
+                return@thread
             }
+            async.resume(Response.ok("Transaction ID: ${signedTx.id}").build())
         }
     }
 
@@ -113,6 +115,32 @@ class GoodyApi(private val rpcOps: CordaRPCOps) {
                 return@thread
             }
             async.resume(Response.ok(mapOf("balances" to balances)).build())
+        }
+    }
+
+    /**
+     * Removes some Candy from the ledger.
+     */
+    @POST
+    @Path("exit")
+    @Consumes(APPLICATION_JSON, APPLICATION_FORM_URLENCODED)
+    fun exit(request: ExitRequest?, @Suspended async: AsyncResponse) {
+        async.register(CompletionCallback { ex ->
+            if (ex == null) log.info("Exit request completed") else log.error("Exit request failed", ex)
+        })
+
+        val exitRequest = request ?: throw BadRequestException("Request data missing")
+        log.info("Received Exit request: candy='{}'", exitRequest.candy)
+
+        thread(isDaemon = true) {
+            val signedTx = try {
+                rpcOps.startFlow(::GoodyExitFlow, exitRequest.candy, exitRequest.issuerReference)
+                        .returnValue.getOrThrow()
+            } catch (ex: Exception) {
+                async.resume(BadRequestException(ex.message))
+                return@thread
+            }
+            async.resume(Response.ok("Transaction ID: ${signedTx.id}").build())
         }
     }
 
