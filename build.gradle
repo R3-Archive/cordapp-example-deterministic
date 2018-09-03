@@ -35,6 +35,13 @@ allprojects {
     group 'com.example'
     version '1.0-SNAPSHOT'
 
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+        maven { url "https://jitpack.io" }
+    }
+
     cordapp {
         info {
             vendor = 'Cordapp Supplier'
