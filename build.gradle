@@ -1,0 +1,119 @@
+buildscript {
+    ext {
+        artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
+        //deterministic_idea_sdk = '1.8 (CorDapp)'
+        corda_plugins_version = '4.0.29'
+        corda_release_version = '4.0-SNAPSHOT'
+        corda_release_group = 'net.corda'
+        kotlin_version = '1.2.51'
+        slf4j_version = '1.7.25'
+        log4j_version = '2.9.1'
+        junit_version = '4.12'
+        hibernate_version = '5.2.6.Final'
+    }
+
+    repositories {
+        mavenLocal()
+        jcenter()
+        maven { url "$artifactory_contextUrl/corda-releases" }
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlin_version"
+        classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
+        classpath "net.corda.plugins:quasar-utils:$corda_plugins_version"
+        classpath "net.corda.plugins:cordapp:$corda_plugins_version"
+        classpath "net.corda.plugins:cordformation:$corda_plugins_version"
+    }
+}
+
+allprojects {
+    apply plugin: 'java'
+    apply plugin: 'net.corda.plugins.cordapp'
+
+    group 'com.example'
+    version '1.0-SNAPSHOT'
+
+    cordapp {
+        info {
+            vendor = 'Cordapp Supplier'
+        }
+    }
+
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+        kotlinOptions {
+            freeCompilerArgs = ['-Xjvm-default=enable']
+        }
+    }
+}
+
+apply from: 'cordapp-project.gradle'
+apply plugin: 'net.corda.plugins.cordformation'
+
+dependencies {
+    cordapp project(':flow')
+    cordapp project(':contract')
+    cordapp project(':web')
+    cordaRuntime "$corda_release_group:corda:$corda_release_version"
+    cordaRuntime "$corda_release_group:corda-webserver:$corda_release_version"
+    cordaRuntime "org.slf4j:slf4j-simple:$slf4j_version"
+}
+
+jar {
+    enabled = false
+}
+
+/*
+ * Example deployment with three nodes: Notary, PartyA and PartyB.
+ */
+def flowJar = tasks.getByPath(':flow:jar')
+def contractJar = tasks.getByPath(':contract:jar')
+def webJar = tasks.getByPath(':web:jar')
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: [flowJar, contractJar, webJar]) {
+    directory file("$buildDir/nodes")
+
+    nodeDefaults {
+        cordapp project(':flow')
+        cordapp project(':contract')
+        cordapp project(':web')
+        projectCordapp {
+            deploy = false
+        }
+        rpcUsers = [['username': 'default', 'password': 'default', 'permissions': [ 'ALL' ]]]
+    }
+
+    node {
+        name 'O=Notary,L=London,C=GB'
+        notary = [validating : false]
+        p2pPort 10002
+        rpcSettings {
+            address 'localhost:10003'
+            adminAddress 'localhost:10043'
+        }
+        rpcUsers = []
+    }
+    node {
+        name 'O=PartyA,L=London,C=GB'
+        p2pPort 10005
+        rpcSettings {
+            address 'localhost:10006'
+            adminAddress 'localhost:10046'
+        }
+        webPort 10007
+    }
+    node {
+        name 'O=PartyB,L=Paris,C=FR'
+        p2pPort 10008
+        rpcSettings {
+            address 'localhost:10011'
+            adminAddress 'localhost:10051'
+        }
+        webPort 10012
+    }
+}
+
+wrapper {
+    gradleVersion = "4.9"
+    distributionType = Wrapper.DistributionType.ALL
+}

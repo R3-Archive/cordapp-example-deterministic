@@ -1,0 +1,65 @@
+allprojects {
+    configurations {
+        all {
+            resolutionStrategy {
+                eachDependency { details ->
+                    switch (details.requested.group) {
+                        case 'org.jetbrains.kotlin':
+                            if (details.requested.name.startsWith('kotlin-')) {
+                                // Force dependencies to use the same version of Kotlin as Corda.
+                                details.useVersion kotlin_version
+                            }
+                            break
+                    }
+                }
+            }
+        }
+        compile {
+            // We want to use SLF4J's version of these bindings: jcl-over-slf4j
+            // Remove any transitive dependency on Apache's version.
+            exclude group: 'commons-logging', module: 'commons-logging'
+        }
+    }
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+        maven { url "https://jitpack.io" }
+    }
+
+    tasks.withType(AbstractCompile).all {
+        // This is a bit ugly, but Gradle isn't recognising the KotlinCompile task
+        // as it does the built-in JavaCompile task.
+        if (it.class.name.startsWith("org.jetbrains.kotlin.gradle.tasks.KotlinCompile")) {
+            kotlinOptions {
+                jvmTarget = "1.8"
+                javaParameters = true   // Useful for reflection.
+            }
+        }
+    }
+
+    tasks.withType(JavaCompile).all {
+        options.encoding = 'UTF-8'
+    }
+
+    tasks.withType(AbstractArchiveTask).all {
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+    }
+}
+
+subprojects {
+    apply plugin: 'maven-publish'
+
+    publishing {
+        publications {
+            "$project.name"(MavenPublication) {
+                from components.java
+                artifactId jar.baseName
+            }
+        }
+    }
+
+    task install(dependsOn: publishToMavenLocal)
+}

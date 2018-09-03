@@ -1,0 +1,13 @@
+apply plugin: 'kotlin'
+
+dependencies {
+    cordapp project(':flow')
+    compileOnly "$corda_release_group:corda-webserver-impl:$corda_release_version"
+    testImplementation "$corda_release_group:corda-node-driver:$corda_release_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test-junit"
+    testImplementation "junit:junit:$junit_version"
+}
+
+jar {
+    baseName "${rootProject.name}-web"
+}
