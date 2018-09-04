@@ -60,7 +60,7 @@ class Goody : Contract {
             val candy = key.product
 
             requireThat {
-                "there are no zero sized outputs" using (outputs.none { it.amount.quantity == 0L })
+                "there are no zero sized outputs" using outputs.none { it.amount.quantity == 0L }
             }
 
             val issueCommand = tx.commands.select<Commands.Issue>().firstOrNull()
@@ -68,13 +68,13 @@ class Goody : Contract {
                 verifyIssueCommand(inputs, outputs, tx, issueCommand, candy, issuer)
             } else {
                 val inputAmount = inputs.sumCandyOrNull() ?: throw IllegalArgumentException("There is at least one candy input for this group")
-                val outputAmount = outputs.sumCandyOrZero(Issued(issuer, candy))
+                val outputAmount = outputs.sumCandyOrZero(candy.issuedBy(issuer))
 
                 // If we want to remove candy from the ledger, that must be signed for by the issuer.
                 // A mis-signed or duplicated exit command will just be ignored here and result in the exit amount being zero.
                 val exitKeys: Set<PublicKey> = inputs.flatMap { it.exitKeys }.toSet()
                 val exitCommand = tx.commands.select<Commands.Exit>(parties = null, signers = exitKeys).singleOrNull { it.value.amount.token == key }
-                val amountExitingLedger = exitCommand?.value?.amount ?: Amount(0, Issued(issuer, candy))
+                val amountExitingLedger = exitCommand?.value?.amount ?: Amount.zero(candy.issuedBy(issuer))
 
                 requireThat {
                     "there are no zero sized inputs" using inputs.none { it.amount.quantity == 0L }
@@ -104,7 +104,7 @@ class Goody : Contract {
         // as-yet-unwritten identity service. See ADP-22 for discussion.
 
         // The grouping ensures that all outputs have the same deposit reference and candy type.
-        val inputAmount = inputs.sumCandyOrZero(Issued(issuer, candy))
+        val inputAmount = inputs.sumCandyOrZero(candy.issuedBy(issuer))
         val outputAmount = outputs.sumCandy()
         val candyCommands = tx.commands.select<Commands.Issue>()
         requireThat {

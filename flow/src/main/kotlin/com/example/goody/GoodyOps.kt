@@ -84,7 +84,8 @@ object GoodyOps {
         templateStates.map { entry ->
             val outputState = deriveState(
                 entry.value,
-                Amount(totalCandies[entry.key] ?: 0, Issued(entry.key, targetAmount.token)), recipient
+                Amount(totalCandies[entry.key] ?: 0, Issued(entry.key, targetAmount.token)),
+                recipient
             )
             tx.addOutputState(outputState)
         }

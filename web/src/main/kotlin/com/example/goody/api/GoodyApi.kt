@@ -13,7 +13,6 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.Vault.StateModificationStatus.MODIFIABLE
 import net.corda.core.node.services.vault.builder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
@@ -150,7 +149,7 @@ class GoodyApi(private val rpcOps: CordaRPCOps) {
             if (candyType != null) {
                 val candyIndex = builder { GoodySchemaV1.PersistentGoodyState::type.equal(candyType.toUpperCase()) }
                 // This query should only return states the calling node is a participant of (meaning they can be modified/spent).
-                sumCriteria.and(QueryCriteria.VaultCustomQueryCriteria(candyIndex, isModifiable = MODIFIABLE))
+                sumCriteria.and(QueryCriteria.VaultCustomQueryCriteria(candyIndex))
             } else {
                 sumCriteria
             }

@@ -4,10 +4,9 @@ apply plugin: 'kotlin-allopen'
 apply from: '../deterministic.gradle'
 
 dependencies {
-    cordaCompile "$corda_release_group:corda-serialization-deterministic:$corda_release_version"
-    cordaCompile("$corda_release_group:corda-jackson:$corda_release_version") {
-        exclude group: corda_release_group
-    }
+    cordaCompile "$corda_release_group:corda-jackson:$corda_release_version"
+    cordaCompile "$corda_release_group:corda-serialization:$corda_release_version"
+    cordaCompile "$corda_release_group:corda-core:$corda_release_version"
     cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     cordaCompile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compileOnly "org.hibernate:hibernate-core:$hibernate_version"
